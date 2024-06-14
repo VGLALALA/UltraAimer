@@ -1,0 +1,13 @@
+
+path: /home/vglalala/UltraAimer/100kCS/ # dataset root dir
+train: /home/vglalala/UltraAimer/100kCS/train/images
+val: /home/vglalala/UltraAimer/100kCS/val/images
+test: /home/vglalala/UltraAimer/100kCS/test/images  # train images (relative to 'path') 128 images
+
+nc: 4
+# Classes
+names:
+  0: CT_Body
+  1: CT_head
+  2: T_Body
+  3: T_Head
