@@ -1,5 +1,6 @@
 import time
 from screen import Calculate_screen_offset, windows_grab_screen
+
 if __name__ == "__main__":
     region = Calculate_screen_offset()
 
@@ -8,4 +9,5 @@ if __name__ == "__main__":
         screenshot = windows_grab_screen(region)
     end_time = time.time()
 
-    print(f"Average time per screenshot: {(end_time - start_time) / 100:.4f} seconds")
+    average_time_ms = (end_time - start_time) / 100 * 1000
+    print(f"Average time per screenshot: {average_time_ms:.4f} ms")
