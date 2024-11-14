@@ -40,8 +40,6 @@ class PID:
         self.ActualSpeed = out
         return out
 
-
-
 # SendInput结构体
 class MouseInput(Structure):
     _fields_ = [("dx", c_long),
@@ -51,11 +49,9 @@ class MouseInput(Structure):
                 ("time", c_ulong),
                 ("dwExtraInfo", POINTER(c_ulong))]
 
-
 # SendInput结构体
 class Input_I(Union):
     _fields_ = [("mi", MouseInput)]
-
 
 # SendInput结构体
 class INPUT(Structure):
@@ -70,6 +66,7 @@ class Mouse:
 
         config_reader = ConfigReader()
         mouse_config = config_reader.get_mouse_config()
+        self.recoil_seperation = mouse_config['recoil_seperation']
         self.moving_type = mouse_config['moving_type'].lower()
         self.curve = mouse_config['curve']
         self.moving_speed = mouse_config['mouse_moving_speed']
@@ -105,6 +102,9 @@ class Mouse:
         elif self.moving_type == 'sendinput':
             self.sendinput = windll.user32.SendInput
             
+        # Initialize current position
+        self.update_position()
+            
     def bezier_mouse_move(self,target_x, target_y, duration_ms, start_x, start_y):
         x1 = start_x + (target_x - start_x) * 0.3
         y1 = start_y - 50
@@ -131,7 +131,6 @@ class Mouse:
         max_points = 15
         total_points = min(total_points, max_points)
         
-
     def find_serial_port(self):
             port = next((port for port in serial.tools.list_ports.comports() if "Arduino" in port.description), None)
             if port is not None:
@@ -141,30 +140,53 @@ class Mouse:
                 time.sleep(10)
                 sys.exit()
 
-    def get_position(self):
+    def update_position(self):
         self.current_x, self.current_y = win32api.GetCursorPos()
         return self.current_x, self.current_y
 
+    def get_position(self):
+        return self.update_position()
+
     def move(self, target_x, target_y, duration_ms):
-        start_x, start_y = self.get_position()
+        self.update_position()
+        start_x, start_y = self.current_x, self.current_y
         tx,ty = start_x + target_x, start_y + target_y
-        tx = self.pid.PID_Cal(tx,self.kp,self.ki,self.kd)
+        tx = self.PID.PID_Cal(tx,self.kp,self.ki,self.kd)
         tx, ty = int(tx), int(ty)
+        
         if self.moving_type == 'kmnet':
-            if self.curve == 'bezier':
-                x1,y1,x2,y2 = self.bezier_mouse_move(tx,ty,duration_ms,self.current_x,self.current_y)
-                kmNet.bezier_move(tx, ty, duration_ms, x1, y1, x2, y2)
-            elif self.curve == 'AI':
-                kmNet.move_auto(tx, ty, duration_ms)
+            if self.recoil_separation:
+                if self.curve == 'bezier':
+                    x1,y1,x2,y2 = self.bezier_mouse_move(tx,self.current_y,duration_ms,self.current_x,self.current_y)
+                    kmNet.bezier_move(tx, self.current_y, duration_ms, x1, y1, x2, y2)
+                elif self.curve == 'AI':
+                    kmNet.move_auto(tx, self.current_y, duration_ms)
+                else:
+                    kmNet.move(tx, self.current_y)
             else:
-                kmNet.move(tx, ty)
+                if self.curve == 'bezier':
+                    x1,y1,x2,y2 = self.bezier_mouse_move(tx,ty,duration_ms,self.current_x,self.current_y)
+                    kmNet.bezier_move(tx, ty, duration_ms, x1, y1, x2, y2)
+                elif self.curve == 'AI':
+                    kmNet.move_auto(tx, ty, duration_ms)
+                else:
+                    kmNet.move(tx, ty)
         elif self.moving_type == 'kmboxb':
-            if self.curve == 'AI':
-                point = self.calculate_optimal_curve_points(self.current_x, self.current_y, tx, ty)
-                self.ser.write(f'km.moveto({tx}, {ty}, {point})\r\n'.encode('utf-8'))
+            if self.recoil_separation:
+                if self.curve == 'AI':
+                    point = self.calculate_optimal_curve_points(self.current_x, self.current_y, tx, self.current_y)
+                    self.ser.write(f'km.moveto({tx}, {self.current_y}, {point})\r\n'.encode('utf-8'))
+            else:
+                if self.curve == 'AI':
+                    point = self.calculate_optimal_curve_points(self.current_x, self.current_y, tx, ty)
+                    self.ser.write(f'km.moveto({tx}, {ty}, {point})\r\n'.encode('utf-8'))
         elif self.moving_type == 'com':
-            self.x_history.append(tx)
-            self.y_history.append(ty)
+            if self.recoil_separation:
+                self.x_history.append(tx)
+                self.y_history.append(self.current_y)
+            else:
+                self.x_history.append(tx)
+                self.y_history.append(ty)
 
             self.x_history.pop(0)
             self.y_history.pop(0)
@@ -177,14 +199,20 @@ class Mouse:
             self.serial_port.write(b"M" + bytes([int(finalx), int(finaly)]))
 
         elif self.moving_type == 'sendinput':
-            windll.user32.SetCursorPos(tx, ty)
-
+            if self.recoil_separation:
+                windll.user32.SetCursorPos(tx, self.current_y)
+            else:
+                windll.user32.SetCursorPos(tx, ty)
         else:
-            win32api.SetCursorPos((tx, ty))
+            if self.recoil_separation:
+                win32api.SetCursorPos((tx, self.current_y))
+            else:
+                win32api.SetCursorPos((tx, ty))
         
-        self.current_x, self.current_y = self.get_position()
+        self.update_position()
 
     def click(self):
+        self.update_position()
         if self.moving_type == 'kmnet':
             kmNet.left(1)
             time.sleep(0.01)
@@ -207,4 +235,4 @@ class Mouse:
             win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
             time.sleep(0.01)
             win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
-
+        self.update_position()

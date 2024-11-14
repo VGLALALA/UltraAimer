@@ -13,11 +13,13 @@ class Screenshot:
     def __init__(self) -> None:
         config_reader = configReader.ConfigReader()
         screen_config = config_reader.get_screen_config()
-        self.mode = screen_config['screenshot_mode']
+        self.mode = screen_config['mode']
         self.auto_detection = screen_config['auto_detection']
         self.width = screen_config['width']
         self.height = screen_config['height']
         self.scr = None
+        self.initialize_screenshotter()
+        
     def initialize_screenshotter(self):
         if self.mode == "mss":
             self.scr = mss.mss()
@@ -29,6 +31,16 @@ class Screenshot:
             self.scr = d3dshot.create()
         else:
             raise ValueError(f"Invalid screenshot mode: {self.mode}")
+    
+    def __init__(self) -> None:
+        config_reader = configReader.ConfigReader()
+        screen_config = config_reader.get_screen_config()
+        self.mode = screen_config['mode']
+        self.auto_detection = screen_config['auto_detection']
+        self.width = screen_config['width']
+        self.height = screen_config['height']
+        self.scr = None
+        self.initialize_screenshotter()
 
     def detect_screen_size(self):
         if self.auto_detection:
@@ -71,13 +83,12 @@ class Screenshot:
     def take_screenshot_d3dshot(self):
         self.scr.screenshot()
 
-    def draw_box_yolo(img, bbox_array, l, img_scale):
-    # 遍历数组里所有目标框
+    def draw_box_yolo(self,img, bbox_array, l, img_scale):
         for temp in bbox_array:
             # 获取4个坐标信息，并将中心点转为左上角
-            bbox = [temp[0] - (temp[2] / 2), temp[1] - (temp[3] / 2), temp[2], temp[3]]  # 左上角x,y,宽高
+            bbox = [temp[0], temp[1], temp[2], temp[3]]  # x, y, width, height from YOLOv10 boxes
             # 识别到的类别，转为int
-            clas = int(temp[4])
+            cls = int(temp[4])  # Class of detected object
             # 识别到的置信度
             conf = temp[5]
             # 绘制方框

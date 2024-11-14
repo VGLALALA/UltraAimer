@@ -2,7 +2,7 @@ import configparser
 import os
 
 class ConfigReader:
-    def __init__(self, config_file='config.ini'):
+    def __init__(self, config_file=r'C:\Users\Makkapakka4090\Downloads\UltraAimer\Backend\config\config.ini'):
         self.config = configparser.ConfigParser()
         if not os.path.exists(config_file):
             raise FileNotFoundError(f"Config file '{config_file}' not found.")
@@ -12,7 +12,7 @@ class ConfigReader:
         return {
             'model_folder': self.config.get('YOLO', 'model_folder'),
             'model': self.config.get('YOLO', 'model'),
-            'img_size': self.config.get('YOLO', 'img_size'),
+            'img_size': self.config.getint('YOLO', 'img_size'),
             'label_off': self.config.getboolean('YOLO', 'label_off'),
             'label_tab': self.config.getint('YOLO', 'label_tab')
         }
@@ -20,7 +20,7 @@ class ConfigReader:
     def get_kmnet_config(self):
         return {
             'ip_address': self.config.get('KmNet', 'ip_address'),
-            'port': self.config.getint('KmNet', 'port'),
+            'port': self.config.get('KmNet', 'port'),
             'key': self.config.get('KmNet', 'key')
         }
 
@@ -34,9 +34,11 @@ class ConfigReader:
 
     def get_mouse_config(self):
         return {
+            'recoil_seperation': self.config.getboolean('Mouse', 'recoil_seperation'),
+            'offset': self.config.getfloat('Mouse', 'offset'),
             'moving_type': self.config.get('Mouse', 'moving_type'),
             'curve': self.config.get('Mouse', 'curve'),
-            'mouse_moving_speed': self.config.getint('Mouse', 'mouse_moving_speed')
+            'mouse_moving_speed': int(self.config.get('Mouse', 'mouse_moving_speed').split('#')[0].strip())
         }
 
     def get_com_config(self):
@@ -59,13 +61,13 @@ class ConfigReader:
         }
     def get_keybind_config(self):
         return {
-            'key_reload_config': self.config.getint('key_binds', 'key_reload_config'),
-            'key_toggle_aim': self.config.getint('key_binds', 'key_toggle_aim'),
-            'key_toggle_recoil': self.config.getint('key_binds', 'key_toggle_recoil'),
-            'key_exit': self.config.getint('key_binds', 'key_exit'),
-            'key_trigger': self.config.getint('key_binds', 'key_trigger'),
-            'key_rapid_fire': self.config.getint('key_binds', 'key_rapid_fire'),
-            'aim_keys': self.config.getint('key_binds', 'aim_keys')
+            'key_reload_config': self.config.get('key_binds', 'key_reload_config'),
+            'key_toggle_aim': self.config.get('key_binds', 'key_toggle_aim'),
+            'key_toggle_recoil': self.config.get('key_binds', 'key_toggle_recoil'),
+            'key_exit': self.config.get('key_binds', 'key_exit'),
+            'key_trigger': self.config.get('key_binds', 'key_trigger'),
+            'key_rapid_fire': self.config.get('key_binds', 'key_rapid_fire'),
+            'aim_keys': self.config.get('key_binds', 'aim_keys')
         }
     def get_debug_config(self):
         return {
