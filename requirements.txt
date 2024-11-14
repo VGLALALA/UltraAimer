@@ -1,0 +1,17 @@
+colored==2.2.4
+customtkinter==5.2.2
+d3dshot==0.1.5
+dxcam==0.0.5
+dxcam-cpp==0.1.1
+hid==1.0.6
+huggingface-hub==0.26.2
+keyboard==0.13.5
+mss==9.0.2
+onnx==1.17.0
+onnxruntime==1.20.0
+pipreqs==0.5.0
+pyautogui==0.9.54
+pynput==1.7.7
+serial==0.0.97
+ultralytics==8.3.27
+wmi==1.5.1

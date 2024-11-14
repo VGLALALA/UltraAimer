@@ -34,52 +34,54 @@
    - Adjust the following parameters as needed:
      
      **Mode Section**:
-     - `aim`: Choose targeting method ('Yolo' for AI detection or 'Color' for color-based detection)
-     - `upper_color` and `lower_color`: RGB values for color detection range (if using Color mode)
+     - `aim`: Choose targeting method ('Yolo' or 'Color')
+     - `upper_color`: RGB values (160, 200, 255) for color detection range
+     - `lower_color`: RGB values (140, 120, 180) for color detection range
      
      **YOLO Section**:
-     - `model_folder`: Directory containing the YOLO model weights
-     - `model`: YOLO model file name (e.g., yolov10n.onnx)
-     - `img_size`: Input image size for the model
-     - `label_off`: Toggle label display
-     - `label_tab`: Label tab settings
+     - `model_folder`: Directory for model weights (weights)
+     - `model`: YOLO model file name (yolov10n.onnx)
+     - `img_size`: Input image size (320)
+     - `label_off`: Toggle label display (True)
+     - `label_tab`: Label tab settings (1)
      
      **KmNet Section**:
-     - `ip_address`: Network connection IP
-     - `port`: Network connection port
-     - `key`: Authentication key
+     - `ip_address`: Network IP (192.168.2.188)
+     - `port`: Network port (8737)
+     - `key`: Authentication key (766B5C53)
      
      **Screen Section**:
      - `screenshot_mode`: Screen capture method (dxcam)
-     - `auto_detection`: Enable/disable automatic detection
-     - `width` and `height`: Screen resolution settings
+     - `auto_detection`: Enable/disable automatic detection (True)
+     - `width`: Screen width (2560)
+     - `height`: Screen height (1440)
      
      **Mouse Section**:
-     - `moving_type`: Mouse movement method (KmNet/KmBoxB/COM/WinAPI/SendInput)
-     - `curve`: Movement curve type (beizer/AI/None)
-     - `mouse_moving_speed`: Movement speed (1-10 scale)
+     - `offset`: Mouse offset (0.25)
+     - `moving_type`: Mouse movement method (KmNet)
+     - `curve`: Movement curve type (beizer)
+     - `mouse_moving_speed`: Movement speed (5)
      
      **COM Section**:
-     - `COM_port`: Serial port for COM connection
-     - `Bauldrate`: Communication speed
+     - `COM_port`: Serial port (COM3)
+     - `Bauldrate`: Communication speed (128000)
      
      **PID Section**:
-     - `kp`: Proportional gain
-     - `ki`: Integral gain
-     - `kd`: Derivative gain
+     - `kp`: Proportional gain (0.6)
+     - `ki`: Integral gain (0.35)
+     - `kd`: Derivative gain (0)
      
      **Key Binds Section**:
-     - Various hotkey settings including:
-       - Reload config
-       - Toggle aim
-       - Toggle recoil
-       - Exit
-       - Trigger
-       - Rapid fire
-       - Aim keys
+     - `key_reload_config`: 0x70
+     - `key_toggle_aim`: 0x72  
+     - `key_toggle_recoil`: 0x4F
+     - `key_exit`: 0x73
+     - `key_trigger`: 0x12
+     - `key_rapid_fire`: 0x05
+     - `aim_keys`: 0x06
      
      **Debug Section**:
-     - `enabled`: Toggle debug mode
+     - `enabled`: Toggle debug mode (true)
    
    - Save your changes
 

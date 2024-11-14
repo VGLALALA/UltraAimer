@@ -9,3 +9,5 @@ __pycache__/
 
 # Ignore weights folder
 weights/
+
+electron-app/
