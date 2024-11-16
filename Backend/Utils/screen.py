@@ -84,23 +84,44 @@ class Screenshot:
         self.scr.screenshot()
 
     def draw_box_yolo(self,img, bbox_array, l, img_scale):
-        print(bbox_array) 
+        # Get screen dimensions and calculate center crop coordinates
+        screen_h, screen_w = img.shape[:2]
+        x1 = screen_w//2 - 320  # 320 is half of 640
+        y1 = screen_h//2 - 320
+        x2 = screen_w//2 + 320
+        y2 = screen_h//2 + 320
+        
+        # Crop image to 640x640 center window
+        img = img[y1:y2, x1:x2]
+        
+        # Draw FPS counter once per frame
+        cv2.putText(img, f"FPS:{int(1000 / l)}", (10, 30), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 2)
+        
+        # Check if bbox_array is empty
+        if not bbox_array:
+            return img  # Return the image unchanged if there are no bounding boxes
+        print(bbox_array)
+        
+        # Draw boxes for each detection
         for temp in bbox_array:
-            print(temp)
-            # 获取4个坐标信息，并将中心点转为左上角
-            bbox = [temp[0], temp[1], temp[2], temp[3]]  # x, y, width, height from YOLOv10 boxes
-            # 识别到的类别，转为int
-            cls = int(temp[4])  # Class of detected object
-            # 识别到的置信度
-            conf = temp[5]
-            # 绘制方框
-            cv2.rectangle(img, (int(bbox[0] * img_scale), int(bbox[1] * img_scale)), (
-                int((bbox[0] * img_scale) + (temp[2] * img_scale)), int((bbox[1] * img_scale) + (temp[3] * img_scale))),
+            if temp != []:
+                print(temp)
+                # Adjust bbox coordinates for cropped window
+                bbox = [
+                    temp[0] - x1/img_scale,  # Adjust x coordinate 
+                    temp[1] - y1/img_scale,  # Adjust y coordinate
+                    temp[2], temp[3]  # Width and height stay the same
+                ]
+                cls = int(temp[4])  # Class of detected object
+                conf = temp[5]  # Confidence score
+                
+                # Draw bounding box if it falls within the cropped area
+                if (0 <= bbox[0] * img_scale <= 640 and 0 <= bbox[1] * img_scale <= 640):
+                    cv2.rectangle(img, 
+                        (int(bbox[0] * img_scale), int(bbox[1] * img_scale)),
+                        (int((bbox[0] * img_scale) + (temp[2] * img_scale)), 
+                         int((bbox[1] * img_scale) + (temp[3] * img_scale))),
                         (0, 255, 0),
                         2)
-
-            cv2.putText(img, f"FPS:{int(1000 / l)}", (10, 30), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 2)
-            # cv2.putText(img, f"CLS:{int(temp[4])}", (int(bbox[0] * img_scale) - 10, int(bbox[1] * img_scale) - 30),
-            #             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 225, 0), 2)
-        # 返回处理好的图片
+                
         return img

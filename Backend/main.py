@@ -98,7 +98,7 @@ if aim_mode == "yolo":
         if len(bbox_array) > 0 and q == 2:
             aim_move(bbox_array)
         
-        shot = S.draw_box_yolo(shot,results,((time.time() - time_initial) * 1000),img_scale_width)
+        shot = S.draw_box_yolo(shot,bbox_array,((time.time() - time_initial) * 1000),img_scale_width)
         if debug_enabled:
             cv2.imshow("debug_window", shot)
             cv2.waitKey(1)
