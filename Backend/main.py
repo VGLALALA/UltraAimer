@@ -5,6 +5,7 @@ import cv2
 import pyautogui
 from win32api import *
 import time
+import numpy as np
 
 M = mouse.Mouse()
 S = screen.Screenshot()
@@ -32,11 +33,11 @@ key_exit = int(keybind_config['key_exit'], 16)
 key_trigger = int(keybind_config['key_trigger'], 16)
 key_rapid_fire = int(keybind_config['key_rapid_fire'], 16)
 aim_keys = int(keybind_config['aim_keys'], 16)
-width = GetSystemMetrics(0)  # 获取当前屏幕的宽
-height = GetSystemMetrics(1)  # 获取当前屏幕的高
-centerx = width / 2  # 屏幕中心点x
-centery = height / 2  # 屏幕中心点y
-len_left, len_top = int(centerx - width / 2), int(centery - height / 2)  # 截取范围的左上角原点
+width = GetSystemMetrics(0)
+height = GetSystemMetrics(1)
+centerx = width / 2
+centery = height / 2
+len_left, len_top = int(centerx - width / 2), int(centery - height / 2)
 monitor = {'left': int(len_left), 'top': int(len_top), 'width': int(width), 'height': int(height)}
 img_scale_width = width / img_size
 img_scale_height = height / img_size
@@ -47,18 +48,17 @@ def aim_move(bbox_array,offset):
     img_scale = width/img_size
     locklst = []
     x, y = 0, 0
-    cx, cy = GetCursorPos()  # 以鼠标为相对
+    cx, cy = GetCursorPos()
     for box in bbox_array:
         if label_off:
-            # 平方和
             if box[5] == label_tab:
-                box_center_x = box[0] + (box[2] / 2)  # x + (width/2)
-                box_center_y = box[1] + (box[3] * (1 - offset))  # Adjust y based on offset percentage
+                box_center_x = box[0] + (box[2] / 2)
+                box_center_y = box[1] + (box[3] * (1 - offset))
                 box.append((box_center_x * img_scale - cx) ** 2 + 
                       (box_center_y * img_scale - cy) ** 2)
         else:
-            box_center_x = box[0] + (box[2] / 2)  # x + (width/2)
-            box_center_y = box[1] + (box[3] * (1 - offset))  # Adjust y based on offset percentage            
+            box_center_x = box[0] + (box[2] / 2)
+            box_center_y = box[1] + (box[3] * (1 - offset))            
             box.append((box_center_x * img_scale - cx) ** 2 + 
                       (box_center_y * img_scale - cy) ** 2)
 
@@ -67,10 +67,6 @@ def aim_move(bbox_array,offset):
 if aim_mode == "yolo":
     model = YOLOv10(model_path)
     while True:
-        # if debug_enabled:
-        #     if not cv2.getWindowProperty('mss_test', cv2.WND_PROP_VISIBLE):
-        #         cv2.destroyAllWindows()
-        #         exit('程序结束...')
         if GetAsyncKeyState(key_exit):
             break
         shot = S.take_screenshot()
@@ -78,13 +74,12 @@ if aim_mode == "yolo":
         results = model(shot)
         bbox_array = []
         for r in results[0].boxes.data.tolist():
-            x, y = r[0], r[1]  # Center x, y
-            w, h = r[2] - r[0], r[3] - r[1]  # Width, height 
-            conf = r[4]  # Confidence
-            cls = r[5]  # Class
+            x, y = r[0], r[1]
+            w, h = r[2] - r[0], r[3] - r[1]
+            conf = r[4]
+            cls = r[5]
             bbox_array.append([x, y, w, h, cls, conf])
         
-        # results[0].show()
         if GetAsyncKeyState(key_toggle_aim) and q == 0:
             q = 1
         elif q == 1 and GetAsyncKeyState(key_toggle_aim) is not True:
@@ -105,6 +100,64 @@ if aim_mode == "yolo":
         
 elif aim_mode == "color":
     while True:
-        pass
-    pass
+        if GetAsyncKeyState(key_exit):
+            break
+            
+        shot = S.take_screenshot()
+        hsv = cv2.cvtColor(shot, cv2.COLOR_BGR2HSV)
+        mask = cv2.inRange(hsv, np.array(lower_color), np.array(upper_color))
+        kernel = np.ones((3, 3), np.uint8)
+        dilated = cv2.dilate(mask, kernel, iterations=3)
+        thresh = cv2.threshold(dilated, 60, 255, cv2.THRESH_BINARY)[1]
+
+        contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+        if contours:
+            screen_center = (width // 2, height // 2)
+            min_distance = float('inf')
+            closest_contour = None
+
+            for contour in contours:
+                x, y, w, h = cv2.boundingRect(contour)
+                area = cv2.contourArea(contour)
+
+                if area < 500 or area > 10000:
+                    continue
+
+                center = (x + w // 2, y + int(h * offset))
+                distance = ((center[0] - screen_center[0]) ** 2 + (center[1] - screen_center[1]) ** 2) ** 0.5
+
+                if distance < min_distance:
+                    min_distance = distance
+                    closest_contour = contour
+
+            if closest_contour is not None and q == 2:
+                x, y, w, h = cv2.boundingRect(closest_contour)
+                center_x = x + w // 2
+                center_y = y + int(h * offset)
+
+                cx, cy = GetCursorPos()
+                x_diff = center_x - cx
+                y_diff = center_y - cy
+
+                M.move(x_diff, y_diff)
+
+                if debug_enabled:
+                    cv2.rectangle(shot, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                    cv2.circle(shot, (center_x, center_y), 5, (0, 0, 255), -1)
+        
+        if GetAsyncKeyState(key_toggle_aim) and q == 0:
+            q = 1
+        elif q == 1 and GetAsyncKeyState(key_toggle_aim) is not True:
+            q = 2
+            print("AIM开")
+        elif GetAsyncKeyState(key_toggle_aim) and q == 2:
+            q = 3
+        elif q == 3 and GetAsyncKeyState(key_toggle_aim) is not True:
+            q = 0
+            print("AIM关")
+            
+        if debug_enabled:
+            cv2.imshow("debug_window", shot)
+            cv2.waitKey(1)
 
