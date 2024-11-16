@@ -84,7 +84,9 @@ class Screenshot:
         self.scr.screenshot()
 
     def draw_box_yolo(self,img, bbox_array, l, img_scale):
+        print(bbox_array) 
         for temp in bbox_array:
+            print(temp)
             # 获取4个坐标信息，并将中心点转为左上角
             bbox = [temp[0], temp[1], temp[2], temp[3]]  # x, y, width, height from YOLOv10 boxes
             # 识别到的类别，转为int

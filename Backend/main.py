@@ -84,7 +84,7 @@ if aim_mode == "yolo":
             cls = r[5]  # Class
             bbox_array.append([x, y, w, h, cls, conf])
         
-        results[0].show()
+        # results[0].show()
         if GetAsyncKeyState(key_toggle_aim) and q == 0:
             q = 1
         elif q == 1 and GetAsyncKeyState(key_toggle_aim) is not True:
@@ -97,10 +97,11 @@ if aim_mode == "yolo":
             print("AIM关")
         if len(bbox_array) > 0 and q == 2:
             aim_move(bbox_array)
-        #shot = S.draw_box_yolo(shot,results,((time.time() - time_initial) * 1000),img_scale_width)
-        # if debug_enabled:
-        #     cv2.imshow("mss_test", shot)
-        #     cv2.waitKey(1)
+        
+        shot = S.draw_box_yolo(shot,results,((time.time() - time_initial) * 1000),img_scale_width)
+        if debug_enabled:
+            cv2.imshow("debug_window", shot)
+            cv2.waitKey(1)
         
 elif aim_mode == "color":
     while True:
