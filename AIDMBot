@@ -1,0 +1,202 @@
+from ultralytics import YOLO
+import cv2
+import os
+import numpy as np
+import win32gui
+import win32api
+import win32con
+from mss import mss
+from ultralytics.utils.plotting import Annotator
+import time
+import pydirectinput
+import concurrent.futures
+import torch
+
+def select_device():
+    if torch.cuda.is_available():
+        # If a CUDA GPU is available, use CUDA
+        device = torch.device("cuda")
+        print(f"Using CUDA: {torch.cuda.get_device_name(0)}")
+    else:
+        # Fallback to CPU
+        device = torch.device("cpu")
+        print("Using CPU, No CUDA device found...")
+    return device
+
+# Get the current working directory
+cwd = os.getcwd()
+
+# Construct the full path to the model file
+model_path = os.path.join(cwd, 'ExternalDependencies', 'python', 'models', 'best_bigger_longest.pt')
+
+# Load the model
+model = YOLO(model_path)
+device = select_device()
+model.to(device)
+
+# Target window name
+target_window_name = "Counter-Strike 2"
+
+# Get the handle of the target window
+target_window_handle = win32gui.FindWindow(None, target_window_name)
+
+# Get the screen size dynamically
+screen_width = win32api.GetSystemMetrics(0)
+screen_height = win32api.GetSystemMetrics(1)
+
+# Create mss instance
+sct = mss()
+
+# Variables for additional logic
+last_fire_event = time.time()
+last_o_key_press_time = time.time()
+last_detection_time = time.time()
+last_move_event = time.time()
+w_key_pressed = False
+
+# Mouse move delay (in seconds)
+mouse_move_delay = 0.01
+
+# Fire delay threshold (in seconds)
+fire_delay_threshold = 0.2
+
+# Define the time threshold for pressing the "W" key (15 seconds)
+w_key_press_threshold = 15
+
+# Thread pool for handling mouse clicks
+thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=5)
+
+def execute_in_thread(fn, *args):
+    # Submit the function to the thread pool
+    thread_pool.submit(fn, *args)
+
+def perform_mouse_click():
+    pydirectinput.mouseDown()
+    pydirectinput.mouseUp()
+    print("FIRE")
+
+def press_turn_key(): 
+    pydirectinput.press('[')
+    print("TURNING")
+    
+def press_buy_key():
+    pydirectinput.press('o')
+
+while True:
+    # Use mss to grab a screenshot of the target window
+    window_rect = win32gui.GetWindowRect(target_window_handle)
+    frame = sct.grab(window_rect)
+
+    # Convert the frame to a NumPy array
+    frame = np.array(frame)
+
+    # Convert BGR to RGB
+    frame = cv2.cvtColor(frame, cv2.COLOR_RGBA2RGB)
+
+    # Crop out just the 640x640 center of the frame
+    height, width, _ = frame.shape
+    center_x, center_y = width // 2, height // 2
+    half_size = 320  # Half of the desired 640x640 size
+    frame = frame[center_y - half_size:center_y + half_size, center_x - half_size:center_x + half_size]
+
+    # Predict the screen
+    results = model.predict(frame, conf=0.35, verbose=False, imgsz=640)
+
+    # Initialize minimum distance and coordinates for the nearest target
+    min_distance = float('inf')
+    nearest_target_coords = None
+
+    # Crosshair position in the cropped frame
+    crosshair_x, crosshair_y = 320, 320
+
+    # Draw the bounding boxes and find the nearest target
+    for result in results:
+        if hasattr(result.boxes, 'xyxy') and len(result.boxes.xyxy) <= 0:
+            continue
+
+        #annotator = Annotator(np.ascontiguousarray(frame))
+        boxes = result.boxes
+
+        for box in boxes:
+            b = box.xyxy[0].cpu().numpy()  # Convert to numpy array and get box coordinates
+            c = box.cls
+            #annotator.box_label(b, model.names[int(c)])
+
+            # Calculate the center of the bounding box
+            box_center_x = (b[0] + b[2]) / 2
+            box_center_y = (b[1] + b[3]) / 2
+
+            # Calculate the distance from the crosshair to the center of the bounding box
+            distance = np.sqrt((box_center_x - crosshair_x) ** 2 + (box_center_y - crosshair_y) ** 2)
+
+            # Calculate the center of the bounding box
+            target_x = (b[0] + b[2]) // 2
+            target_y = b[1] + (b[3] - b[1]) // 48  # Divide by 12 to target the very top of the box
+
+            # Update minimum distance and coordinates if this target is closer
+            if distance < min_distance:
+                min_distance = distance
+                nearest_target_coords = (target_x, target_y)
+
+    # Draw a circle around the nearest target on the frame
+    if nearest_target_coords is not None:
+        #cv2.circle(frame, (int(nearest_target_coords[0]), int(nearest_target_coords[1])), 2, (0, 255, 0), 2)
+
+        # Print the distance to the nearest target and move the mouse
+        #print(f"Distance to nearest target: {min_distance}")
+
+        # Define a scaling factor for mouse movement speed
+        mouse_speed_factor = 3.0  # Adjust the value as needed
+
+        # Calculate the relative movement needed
+        target_x = int(nearest_target_coords[0] - crosshair_x) * mouse_speed_factor
+        target_y = int(nearest_target_coords[1] - crosshair_y) * mouse_speed_factor
+
+        # Move the mouse to the nearest target box center
+        win32api.mouse_event(win32con.MOUSEEVENTF_MOVE, int(target_x), int(target_y), 0, 0)
+
+        # Additional logic - check if it's time to fire
+        if time.time() - last_fire_event > fire_delay_threshold:
+            # Perform mouse click in a separate thread
+            execute_in_thread(perform_mouse_click)
+            last_fire_event = time.time()
+
+    # Check if it's time to press the 'o' key (every 5 seconds)
+    if time.time() - last_o_key_press_time > 5:
+        execute_in_thread(press_buy_key)
+        last_o_key_press_time = time.time()
+
+    # Additional logic - check if an enemy is detected
+    if nearest_target_coords is not None:
+        last_detection_time = time.time()
+
+        # Reset the "W" key state when an enemy is detected
+        if w_key_pressed:
+            pydirectinput.keyUp('w')
+            w_key_pressed = False
+
+    # Check if no enemy has been detected within the last 5 seconds
+    if nearest_target_coords is None and time.time() - last_detection_time > 5:
+        # Simulate pressing "[" key every 0.3 seconds to look around
+        if time.time() - last_move_event > 0.3:
+            execute_in_thread(press_turn_key)
+            last_move_event = time.time()
+
+        # Check if it's time to press the "W" key (15 seconds without enemy)
+        if time.time() - last_detection_time > w_key_press_threshold:
+            if not w_key_pressed:
+                pydirectinput.keyDown('w')
+                w_key_pressed = True
+
+    # Show the screen
+    #cv2.imshow('Screenshot', frame)
+
+    # Wait for a key press
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+# Release the "W" key if it's still pressed when the script ends
+if w_key_pressed:
+    pydirectinput.keyUp('w')
+
+cv2.destroyAllWindows()
