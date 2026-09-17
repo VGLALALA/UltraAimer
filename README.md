@@ -18,16 +18,34 @@
 
 ## Installation
 
+### Interactive installer
+
+Run the setup wizard and choose the accelerator profile for your computer:
+
+```bash
+python setup.py
+```
+
+The wizard detects your operating system, presents only relevant CPU/GPU
+options, installs the selected dependencies, and can launch the web dashboard.
+
 1. **Clone the repository**:
    ```bash
    git clone https://github.com/yourusername/UltraAImer.git
    cd UltraAImer
    ```
 
-2. **Install dependencies**:
+2. **Install dependencies** (Python 3.9 or newer):
    ```bash
-   pip install -r requirements.txt
+   python -m pip install ".[cpu]"       # portable CPU
+   python -m pip install ".[nvidia]"    # NVIDIA, Windows/Linux
+   python -m pip install ".[amd]"       # AMD DirectML on Windows
+   python -m pip install ".[apple]"     # Apple Silicon MPS
    ```
+
+   Linux AMD users must install the PyTorch build matching their ROCm version
+   before installing UltraAImer. GPU drivers and ROCm/CUDA runtimes are not
+   installed by this package.
 
 3. **Configure settings**:
    - Open `config.ini` in your preferred text editor
@@ -87,8 +105,17 @@
 
 4. **Run UltraAImer**:
    ```bash
-   python main.py
+   ultraaimer
    ```
+
+   Or launch the local web control surface, then open the displayed address:
+
+   ```bash
+   ultraaimer-web
+   ```
+
+   The dashboard binds only to `127.0.0.1`. It can edit configuration and
+   start or stop the local runtime without exposing controls to the network.
 
 ## Supported Games
 

@@ -330,9 +330,19 @@ def check_det_dataset(dataset, autodownload=True):
             if s.startswith("http") and s.endswith(".zip"):  # URL
                 safe_download(url=s, dir=DATASETS_DIR, delete=True)
             elif s.startswith("bash "):  # bash script
+                if os.getenv("ULTRAAIMER_ALLOW_DATASET_SCRIPTS") != "1":
+                    raise PermissionError(
+                        "Dataset shell downloads are disabled. Review the YAML and set "
+                        "ULTRAAIMER_ALLOW_DATASET_SCRIPTS=1 to allow trusted scripts."
+                    )
                 LOGGER.info(f"Running {s} ...")
                 r = os.system(s)
             else:  # python script
+                if os.getenv("ULTRAAIMER_ALLOW_DATASET_SCRIPTS") != "1":
+                    raise PermissionError(
+                        "Inline dataset code is disabled. Review the YAML and set "
+                        "ULTRAAIMER_ALLOW_DATASET_SCRIPTS=1 to allow trusted scripts."
+                    )
                 exec(s, {"yaml": data})
             dt = f"({round(time.time() - t, 1)}s)"
             s = f"success ✅ {dt}, saved to {colorstr('bold', DATASETS_DIR)}" if r in (0, None) else f"failure {dt} ❌"

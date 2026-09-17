@@ -6,6 +6,9 @@
 
 # Ignore Python cache files
 __pycache__/
+*.egg-info/
+.DS_Store
+build/
 
 # Ignore weights folder
 weights/
